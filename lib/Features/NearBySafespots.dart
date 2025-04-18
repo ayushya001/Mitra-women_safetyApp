@@ -28,6 +28,69 @@ class _NearbysafespotsState extends State<Nearbysafespots> {
   @override
   Widget build(BuildContext context) {
 
+    /*
+    // if (currentUserId != null) {
+    //
+    //       WidgetsBinding.instance.addPostFrameCallback((_) {
+    //         Provider.of<AddProvider>(context, listen: false)
+    //             .initializeFromFirebase(currentUserId);
+    //       });
+    //
+    //
+    //
+    //       // Listen to incoming SOS alerts
+    //       FirebaseFirestore.instance
+    //           .collection('Users')
+    //           .doc(currentUserId)
+    //           .collection('SOS')
+    //           .snapshots()
+    //           .listen((querySnapshot) {
+    //         for (var doc in querySnapshot.docs) {
+    //           final data = doc.data();
+    //           final sosId = doc.id; // Get SOS document ID
+    //           final receiverUid = currentUserId; //  Use current user UID as receiver
+    //
+    //           showDialog(
+    //             context: context,
+    //             builder: (context) => AlertDialog(
+    //               title: Text("🚨 SOS Alert"),
+    //               content: Text(
+    //                   "Sender shared location:\nLat: ${data['latitude']}\nLng: ${data['longitude']}"),
+    //               actions: [
+    //                 TextButton(
+    //                   child: Text("View on Map"),
+    //                   onPressed: () {
+    //                     final lat = data['latitude'];
+    //                     final lng = data['longitude'];
+    //                     final url =
+    //                         'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    //                     launchUrl(Uri.parse(url));
+    //                     Navigator.of(context).pop();
+    //
+    //                     //  Delete SOS after viewing
+    //                     deleteSosAfterHandled(receiverUid, sosId);
+    //                   },
+    //                 ),
+    //                 TextButton(
+    //                   child: Text("Dismiss"),
+    //                   onPressed: () {
+    //                     Navigator.of(context).pop();
+    //
+    //                     //  Delete SOS after dismissing
+    //                     deleteSosAfterHandled(receiverUid, sosId);
+    //                   },
+    //                 )
+    //               ],
+    //             ),
+    //           );
+    //         }
+    //       });
+    //
+    //       setupFCMListener();
+    //
+
+     */
+
 
 
 

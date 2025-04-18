@@ -49,11 +49,14 @@ dependencies:
   firebase_auth:
   firebase_core:
   cloud_firestore:
+  flutter_local_notifications:
+  firebase_messaging: ^15.2.5
   firebase_storage:
   google_sign_in: ^6.2.2
   pinput:
   shared_preferences: ^2.5.2
   lucide_icons_flutter: ^1.2.7
+  url_launcher:
 
 
 dev_dependencies:

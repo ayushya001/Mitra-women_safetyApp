@@ -1,14 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import 'package:sidebarx/sidebarx.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:women_safety/Pages/PrivacyPolicyPage.dart';
 import 'package:women_safety/Pages/SendFeedbackPage.dart';
 import 'package:women_safety/Pages/contacts.dart';
 import 'package:women_safety/Pages/settings.dart';
+import 'package:women_safety/Utils/AddContactsButton.dart';
 
 import '../Widget/Features.dart';
 import '../Widget/SosButton.dart';
+import '../provider/AddProvider.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -19,6 +26,72 @@ class Homepage extends StatefulWidget {
 
 class _HomepageState extends State<Homepage> {
   var currentPage ;
+
+
+  @override
+  void initState() {
+    super.initState();
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId != null) {
+      // Call provider if needed
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<AddProvider>(context, listen: false)
+            .initializeFromFirebase(currentUserId);
+      });
+
+      // Listen to incoming SOS alerts
+      FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUserId)
+          .collection('SOS')
+          .snapshots()
+          .listen((querySnapshot) {
+        for (var doc in querySnapshot.docs) {
+          final data = doc.data();
+          final sosId = doc.id; // ✅ Get SOS document ID
+          final receiverUid = currentUserId; // ✅ Use current user UID as receiver
+
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text("🚨 SOS Alert"),
+              content: Text(
+                  "Sender shared location:\nLat: ${data['latitude']}\nLng: ${data['longitude']}"),
+              actions: [
+                TextButton(
+                  child: Text("View on Map"),
+                  onPressed: () {
+                    final lat = data['latitude'];
+                    final lng = data['longitude'];
+                    final url =
+                        'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+                    launchUrl(Uri.parse(url));
+                    Navigator.of(context).pop();
+
+                    // ✅ Delete SOS after viewing
+                    deleteSosAfterHandled(receiverUid, sosId);
+                  },
+                ),
+                TextButton(
+                  child: Text("Dismiss"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+
+                    // ✅ Delete SOS after dismissing
+                    deleteSosAfterHandled(receiverUid, sosId);
+                  },
+                )
+              ],
+            ),
+          );
+        }
+      });
+    }
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -31,15 +104,7 @@ class _HomepageState extends State<Homepage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
-        // leading: IconButton(
-        //   icon: Icon(Icons.dehaze,
-        //       color: Colors.white
-        //   ,size: 32,), // Dehaze icon
-        //   onPressed: () {
-        //     // Add your onPressed action here
-        //     print("Dehaze icon clicked");
-        //   },
-        // ),
+
         title: Text("Your Safety,Our Commitment",
           style: TextStyle(
               fontWeight: FontWeight.bold,
@@ -109,20 +174,14 @@ class _HomepageState extends State<Homepage> {
 
               Row(
                 children: [
-                  SosButton(onTap: () {  },),
-                  SizedBox(width: mq.width*0.02,),
-                  Container(
-                    width: MediaQuery.of(context).size.width * 0.47, // 40% of screen width
-                    height: MediaQuery.of(context).size.height * 0.3, // 40% of screen height
-                    decoration: BoxDecoration(
-                      color: Colors.transparent, // Background color (optional)
-                      border: Border.all(
-                        color: Colors.black, // Black boundary
-                        width: 2.0, // Thickness of the border
-                      ),
-                    ),
+                  SosButton(onTap: () {
+                    sendSosToContacts();
 
-                  ),
+                  },),
+                  SizedBox(width: mq.width*0.02,),
+                  Addcontactsbutton(onTap: (){
+
+                  })
                 ],
               ),
               SizedBox(height: mq.height*0.02,),
@@ -253,6 +312,111 @@ class _HomepageState extends State<Homepage> {
 
       ),
     );
+  }
+
+  void sendSosToContacts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Get current location
+    final position = await getCurrentPosition(); // your location function
+    print("The current position is: ${position.toString()}");
+
+    final baseSosData = {
+      'senderId': user.uid,
+      'latitude': position?.latitude,
+      'longitude': position?.longitude,
+      'timestamp': Timestamp.now(),
+    };
+
+    final contactsSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(user.uid)
+        .get();
+
+    final contacts = contactsSnapshot.data()?['Contacts'] ?? [];
+
+    for (var contact in contacts) {
+      // Create a document reference with an auto-generated ID
+      final docRef = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(contact['uid'])
+          .collection('SOS')
+          .doc();
+
+      // Add sosId in the data
+      final sosData = {
+        ...baseSosData,
+        'sosId': docRef.id,
+      };
+
+      await docRef.set(sosData); // Save the SOS with sosId
+    }
+  }
+
+
+  Future<Position?> getCurrentPosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled
+      print('Location services are disabled.');
+      return null;
+    }
+
+    // Check and request permission
+    permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied
+        print('Location permissions are denied.');
+        return null;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever
+      print('Location permissions are permanently denied.');
+      return null;
+    }
+
+    // When permission is granted, get the position
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+  }
+
+  Future<void> deleteSosAfterHandled(String receiverUid, String sosId) async {
+    await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(receiverUid)
+        .collection('SOS')
+        .doc(sosId)
+        .delete();
+  }
+  void setupFCMListener() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (message.notification != null && context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text("🚨 SOS Alert"),
+            content: Text(message.notification!.body ?? 'SOS Received!'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text("Dismiss"),
+              ),
+            ],
+          ),
+        );
+      }
+    });
   }
 
   Widget menuItem(int id, String title, IconData icon, bool selected){

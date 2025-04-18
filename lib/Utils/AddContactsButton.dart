@@ -1,47 +1,38 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:women_safety/Pages/SearchAndaddContacts.dart';
+import 'package:women_safety/Utils/AddContactProvider.dart';
 
-import '../provider/SosButtonProvider.dart';
-
-class SosButton extends StatefulWidget {
+class Addcontactsbutton extends StatefulWidget {
   final VoidCallback onTap;
-
-  const SosButton({Key? key, required this.onTap}) : super(key: key);
+  const Addcontactsbutton({super.key, required this.onTap});
 
   @override
-  _SosButtonState createState() => _SosButtonState();
+  State<Addcontactsbutton> createState() => _AddcontactsbuttonState();
 }
 
-class _SosButtonState extends State<SosButton> {
+class _AddcontactsbuttonState extends State<Addcontactsbutton> {
   bool _isPressed = false;
 
   void _handleTapDown(BuildContext context) {
-    Provider.of<SosButtonProvider>(context, listen: false).setPressed(true);
+    Provider.of<ContactButtonProvider>(context, listen: false).setPressed(true);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => Searchandaddcontacts()),
+    );
   }
 
   void _handleTapUp(BuildContext context) {
-    Provider.of<SosButtonProvider>(context, listen: false).setPressed(false);
+    Provider.of<ContactButtonProvider>(context, listen: false).setPressed(false);
     widget.onTap(); // Call SOS function
   }
 
   @override
   Widget build(BuildContext context) {
 
-
-
-
-
-
-
-
-
     // Fetch the current button state
-    final isPressed = Provider.of<SosButtonProvider>(context).isPressed;
+    final isPressed = Provider.of<ContactButtonProvider>(context).isPressed;
 
     return Material(
       color: Colors.transparent,
@@ -70,14 +61,14 @@ class _SosButtonState extends State<SosButton> {
             alignment: Alignment.center,
             children: [
               Icon(
-                LucideIcons.circleAlert,
+                Icons.contacts,
                 color: Colors.white,
                 size: 80,
               ),
               Positioned(
                 bottom: 20,
                 child: Text(
-                  "Send SOS",
+                  "Add Contacts",
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -91,7 +82,4 @@ class _SosButtonState extends State<SosButton> {
       ),
     );
   }
-
-
 }
-
